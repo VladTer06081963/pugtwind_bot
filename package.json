@@ -1,0 +1,26 @@
+{
+  "name": "pugtwind_bot",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build:css": "tailwindcss -i ./styles/tailwind.css -o ./public/css/tailwind.css --watch",
+    "start": "node app.js",
+    "dev": "nodemon app.js"
+  },
+  "keywords": [],
+  "author": "WladTer",
+  "license": "ISC",
+  "dependencies": {
+    "@ngrok/ngrok": "^1.4.1",
+    "axios": "^1.7.7",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.0",
+    "node-telegram-bot-api": "^0.66.0",
+    "pug": "^3.0.3",
+    "tailwindcss": "^3.4.13"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.7"
+  }
+}
