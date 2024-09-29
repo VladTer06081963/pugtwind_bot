@@ -1,97 +1,48 @@
-require('dotenv').config();
+// app.js
 const express = require('express');
-const pug = require('pug');
-const fs = require('fs');
 const path = require('path');
-const http = require('http');
-const TelegramBot = require('node-telegram-bot-api');
-const axios = require('axios');
+const { PORT } = require('./config/env');
+const botRoutes = require('./routes/botRoutes');
+const bot = require('./bot/bot');
+const { updateWebAppUrl } = require('./bot/bot');
+const { fetchNgrokUrl } = require('./config/ngrok');
+
+// Подключение переменных окружения
+require('dotenv').config();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const isDevelopment = process.env.USE_NGROK === 'true';
+
 // Подключение статических файлов
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Настройка Pug для шаблонизатора
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
-const html = pug.renderFile('./views/index.pug', {
-  pretty: true,
-  title: 'Telegram Web App',
-  message: 'Добро пожаловать!!!'
-});
-fs.writeFileSync('./views/index1.html', html);
 
-
-// Пример маршрута
+// Основной маршрут
 app.get('/', (req, res) => {
   res.render('index', { title: 'Telegram Web App', message: 'Добро пожаловать!!!' });
 });
 
-// Функция для получения URL ngrok туннеля
-function fetchNgrokUrl() {
-  return new Promise((resolve, reject) => {
-    http.get('http://127.0.0.1:4040/api/tunnels', (res) => {
-      let data = '';
-      res.on('data', (chunk) => {
-        data += chunk;
-      });
-      res.on('end', () => {
-        try {
-          const tunnels = JSON.parse(data);
-          if (tunnels.tunnels && tunnels.tunnels.length > 0) {
-            resolve(tunnels.tunnels[0].public_url);
-          } else {
-            reject('No tunnels found');
-          }
-        } catch (e) {
-          reject(e);
-        }
-      });
-    }).on('error', (err) => {
-      reject(err);
-    });
-  });
-}
-
-// Функция для обновления Web App URL в меню Telegram
-async function updateWebAppUrl(newUrl) {
-  const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
-  try {
-    const response = await axios.post(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/setChatMenuButton`, {
-      menu_button: {
-        type: 'web_app',
-        text: 'Открыть приложение',  // Текст кнопки
-        web_app: {
-          url: newUrl  // URL Web App
-        }
-      }
-    });
-    console.log('Web App URL успешно обновлен в Telegram:', response.data);
-  } catch (error) {
-    console.error('Ошибка при обновлении Web App URL в Telegram:', error);
-  }
-}
-
-// Инициализация Telegram Bot
-const TOKEN = process.env.TELEGRAM_TOKEN;
-const bot = new TelegramBot(TOKEN, { polling: true });
-
-bot.onText(/\/start/, (msg) => {
-  bot.sendMessage(msg.chat.id, 'Привет! Это ваш Telegram бот.');
-});
+// Подключение роутов бота
+app.use('/api', botRoutes);
 
 // Запуск сервера
-app.listen(PORT, async () => {
+app.listen(PORT, () => {
   console.log(`Express веб-сервер запущен на порту ${PORT}...`);
 
-  // Получаем текущий URL ngrok туннеля
-  fetchNgrokUrl().then(url => {
-    console.log(`ngrok туннель установлен на: ${url}`);
+  // Если в режиме разработки, получаем URL ngrok и обновляем Web App URL в Telegram
+  if (isDevelopment) {
+    fetchNgrokUrl()
+      .then((url) => {
+        console.log(`ngrok туннель установлен на: ${url}`);
 
-    // Обновляем Web App URL в Telegram
-    updateWebAppUrl(url);
-  }).catch(error => {
-    console.error('Ошибка при получении URL туннеля ngrok:', error);
-  });
+        // Обновляем URL Web App в Telegram
+        updateWebAppUrl(url);
+      })
+      .catch((error) => {
+        console.error('Ошибка при получении URL туннеля ngrok:', error);
+      });
+  }
 });
