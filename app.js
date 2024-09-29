@@ -1,5 +1,7 @@
 require('dotenv').config();
 const express = require('express');
+const pug = require('pug');
+const fs = require('fs');
 const path = require('path');
 const http = require('http');
 const TelegramBot = require('node-telegram-bot-api');
@@ -7,13 +9,19 @@ const axios = require('axios');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
+// Подключение статических файлов
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Настройка Pug для шаблонизатора
 app.set('view engine', 'pug');
 app.set('views', path.join(__dirname, 'views'));
+const html = pug.renderFile('./views/index.pug', {
+  pretty: true,
+  title: 'Telegram Web App',
+  message: 'Добро пожаловать!!!'
+});
+fs.writeFileSync('./views/index1.html', html);
 
-// Подключение статических файлов
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Пример маршрута
 app.get('/', (req, res) => {
